@@ -1,0 +1,101 @@
+name: Android APK
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install web/Capacitor dependencies
+        run: npm install
+
+      - name: Sync Capacitor Android project
+        # Copies the built web app (this repo's root is the web app itself)
+        # into android/app/src/main/assets/public and applies the
+        # capacitor.config.json settings to the native project.
+        run: npx cap sync android
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Gradle wrapper
+        # The wrapper JAR is a binary file and is intentionally not
+        # committed to the repository; we regenerate it here using the
+        # Gradle version provided by setup-gradle.
+        working-directory: android
+        run: gradle wrapper --gradle-version 8.7
+
+      - name: Grant execute permission for gradlew
+        working-directory: android
+        run: chmod +x ./gradlew
+
+      - name: Decode signing keystore (optional)
+        id: signing
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        working-directory: android
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release-key.jks
+          echo "has_keystore=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build debug APK
+        if: ${{ steps.signing.outputs.has_keystore != 'true' }}
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Build signed release APK
+        if: ${{ steps.signing.outputs.has_keystore == 'true' }}
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Locate APK
+        id: apk
+        run: |
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            echo "path=android/app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=android/app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rename artifact
+        run: cp "${{ steps.apk.outputs.path }}" QR-Vault-Android.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QR-Vault-Android
+          path: QR-Vault-Android.apk
+
+      - name: Attach APK to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: QR-Vault-Android.apk

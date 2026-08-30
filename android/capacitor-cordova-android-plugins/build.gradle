@@ -1,0 +1,24 @@
+// This module is automatically generated/updated by `npx cap sync android`.
+// It aggregates any Cordova-compatible plugins used by the project.
+// QR Vault uses none, so it builds as an empty Android library.
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.mahmadsoni.qrvault.cordova.plugins"
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'src/main/libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "qr-vault",
+  "version": "1.0.0",
+  "description": "QR Vault — privacy-first QR generator, scanner and vault (PWA + Capacitor Android).",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "android:add": "cap add android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

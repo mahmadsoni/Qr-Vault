@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="tj" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<!-- Intentionally no <base href> tag: every asset link below is a
+     relative path, so the app works correctly both under GitHub Pages'
+     /Qr-Vault/ subpath and inside the Capacitor Android app's local
+     root — no path assumptions needed. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>QR Vault</title>
+<meta name="description" content="QR Vault — private QR generator, scanner and vault. Your data never leaves your device." />
+<meta name="theme-color" content="#0a0e17" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="assets/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/responsive.css" />
+
+<!-- Self-hosted QR generator: no CDN/network needed to create codes. -->
+<script src="js/vendor/qrcode-generator.js" defer></script>
+<script src="js/vendor/qrcode-shim.js" defer></script>
+<!-- Scanning prefers the browser's built-in BarcodeDetector (no network
+     needed); js/lib-loader.js only loads a CDN fallback decoder (jsQR)
+     for browsers that lack BarcodeDetector support. -->
+<script src="js/lib-loader.js" defer></script>
+</head>
+<body>
+
+<div id="offline-banner" data-i18n="error_offline" hidden></div>
+<div id="toast-container" aria-live="polite"></div>
+
+<div class="app-shell">
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="nav-item active" data-view="home"><span class="nav-icon" aria-hidden="true">🏠</span><span data-i18n="nav_home">Home</span></button>
+    <button class="nav-item" data-view="create"><span class="nav-icon" aria-hidden="true">➕</span><span data-i18n="nav_create">Create</span></button>
+    <button class="nav-item" data-view="scan"><span class="nav-icon" aria-hidden="true">📷</span><span data-i18n="nav_scan">Scan</span></button>
+    <button class="nav-item" data-view="vault"><span class="nav-icon" aria-hidden="true">🗄</span><span data-i18n="nav_vault">Vault</span></button>
+    <button class="nav-item" data-view="settings"><span class="nav-icon" aria-hidden="true">⚙️</span><span data-i18n="nav_settings">Settings</span></button>
+  </nav>
+
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+    <header class="app-header glass">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">🔐</div>
+        <span data-i18n="app_name">QR Vault</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button id="btn-install" class="btn" data-i18n="btn_install" hidden>Install</button>
+        <select id="lang-select" class="lang-select" aria-label="Language">
+          <option value="tj">TJ</option>
+          <option value="ru">RU</option>
+          <option value="en">EN</option>
+        </select>
+      </div>
+    </header>
+
+    <main class="app-main">
+
+      <!-- HOME -->
+      <section id="view-home" class="view active">
+        <div class="hero glass">
+          <div class="hero-logo" aria-hidden="true">🔐</div>
+          <h1 data-i18n="app_name">QR Vault</h1>
+          <p data-i18n="tagline">Private QR Tools. Simple. Fast.</p>
+        </div>
+
+        <div class="privacy-badge glass">
+          <span class="icon" aria-hidden="true">🛡️</span>
+          <span data-i18n="privacy_badge">Your QR data stays on this device</span>
+        </div>
+
+        <div class="quick-actions">
+          <button id="home-create-btn" class="big-btn" data-i18n="quick_create">Create QR</button>
+          <button id="home-scan-btn" class="big-btn secondary" data-i18n="quick_scan">Scan QR</button>
+        </div>
+
+        <div class="section glass">
+          <h2 data-i18n="quick_types">Quick types</h2>
+          <div id="home-quick-types" class="type-grid">
+            <button class="type-chip" data-type="url"><span>🔗</span><span data-i18n="type_url">URL</span></button>
+            <button class="type-chip" data-type="wifi"><span>📶</span><span data-i18n="type_wifi">Wi-Fi</span></button>
+            <button class="type-chip" data-type="contact"><span>👤</span><span data-i18n="type_contact">Contact</span></button>
+            <button class="type-chip" data-type="text"><span>📝</span><span data-i18n="type_text">Text</span></button>
+          </div>
+        </div>
+
+        <div class="section glass">
+          <h2 data-i18n="vault_stats">Vault statistics</h2>
+          <div id="home-vault-stats">0</div>
+        </div>
+      </section>
+
+      <!-- CREATE -->
+      <section id="view-create" class="view">
+        <div class="section glass">
+          <h2 data-i18n="quick_create">Create QR</h2>
+          <div id="type-grid" class="type-grid"></div>
+        </div>
+
+        <form id="qr-form" class="section glass">
+          <div id="create-fields"></div>
+          <button type="submit" class="btn btn-primary" data-i18n="btn_generate">Generate</button>
+        </form>
+
+        <div class="section glass">
+          <h2 data-i18n="customize_title">QR Customization</h2>
+          <div class="customize-grid">
+            <div class="form-field">
+              <label for="opt-size" data-i18n="customize_size">Size</label>
+              <input id="opt-size" type="range" min="180" max="480" step="10" value="320" />
+            </div>
+            <div class="form-field">
+              <label for="opt-margin" data-i18n="customize_margin">Margin</label>
+              <input id="opt-margin" type="range" min="0" max="10" step="1" value="4" />
+            </div>
+            <div class="form-field">
+              <label for="opt-fg" data-i18n="customize_fg">Foreground color</label>
+              <input id="opt-fg" type="color" value="#00e5ff" />
+            </div>
+            <div class="form-field">
+              <label for="opt-bg" data-i18n="customize_bg">Background color</label>
+              <input id="opt-bg" type="color" value="#0a0e17" />
+            </div>
+            <div class="form-field">
+              <label for="opt-ecc" data-i18n="customize_ecc">Error correction level</label>
+              <select id="opt-ecc">
+                <option value="L">L</option>
+                <option value="M" selected>M</option>
+                <option value="Q">Q</option>
+                <option value="H">H</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="opt-logo" data-i18n="customize_logo">Center logo (optional)</label>
+              <input id="opt-logo" type="file" accept="image/*" />
+            </div>
+          </div>
+          <div class="btn-row">
+            <button id="btn-remove-logo" class="btn" data-i18n="btn_remove_logo">Remove logo</button>
+            <button id="btn-reset-custom" class="btn" data-i18n="customize_reset">Reset customization</button>
+          </div>
+        </div>
+
+        <div id="preview-wrap" class="glass">
+          <canvas id="qr-canvas" width="320" height="320" aria-label="QR preview"></canvas>
+          <div id="preview-actions" class="btn-row" hidden>
+            <button id="btn-download" class="btn" data-i18n="btn_download">Download PNG</button>
+            <button id="btn-copy-qr" class="btn" data-i18n="btn_copy">Copy</button>
+            <button id="btn-share-qr" class="btn" data-i18n="btn_share">Share</button>
+            <button id="btn-save-vault" class="btn btn-primary" data-i18n="btn_save_vault">Save to Vault</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCAN -->
+      <section id="view-scan" class="view">
+        <div class="section glass">
+          <h2 data-i18n="scan_title">QR Scanner</h2>
+          <div class="scan-viewport">
+            <video id="scan-video" playsinline hidden></video>
+            <canvas id="scan-canvas" class="hidden"></canvas>
+            <div class="scan-frame"></div>
+          </div>
+          <div class="btn-row">
+            <button id="btn-scan-start" class="btn btn-primary" data-i18n="scan_start">Start scanner</button>
+            <button id="btn-scan-stop" class="btn btn-danger" data-i18n="scan_stop" hidden>Stop camera</button>
+          </div>
+          <p id="scan-status" class="form-field" hidden></p>
+        </div>
+
+        <div id="scan-result-box" class="section glass" hidden>
+          <h2 data-i18n="scan_result">Scan result</h2>
+          <p id="scan-result-text" style="word-break:break-all;"></p>
+          <div class="btn-row">
+            <button id="btn-scan-open" class="btn btn-primary" data-i18n="btn_open_url" hidden>Open link</button>
+            <button id="btn-scan-copy" class="btn" data-i18n="btn_copy">Copy</button>
+            <button id="btn-scan-save" class="btn" data-i18n="btn_save_vault">Save to Vault</button>
+            <button id="btn-scan-again" class="btn" data-i18n="btn_scan_again">Scan again</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VAULT -->
+      <section id="view-vault" class="view">
+        <div class="section glass">
+          <h2 data-i18n="vault_title">QR Vault</h2>
+          <div class="vault-toolbar">
+            <input id="vault-search" type="search" data-i18n-placeholder="vault_search" placeholder="Search vault..." />
+            <div id="vault-filters">
+              <button class="active" data-filter="all" data-i18n="vault_filter_all">All</button>
+              <button data-filter="fav" data-i18n="vault_filter_fav">Favorites</button>
+            </div>
+          </div>
+          <div id="vault-list" role="list"></div>
+          <p id="vault-empty" data-i18n="vault_empty" hidden></p>
+          <div class="btn-row">
+            <button id="btn-clear-vault-main" class="btn btn-danger" data-i18n="btn_clear_all">Clear all</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view">
+        <div class="section glass">
+          <h2 data-i18n="settings_title">Settings</h2>
+
+          <div class="form-field">
+            <label for="theme-select" data-i18n="settings_theme">Theme</label>
+            <select id="theme-select">
+              <option value="dark" data-i18n="settings_theme_dark">Dark</option>
+              <option value="light" data-i18n="settings_theme_light">Light</option>
+              <option value="system" data-i18n="settings_theme_system">System</option>
+            </select>
+          </div>
+
+          <div class="btn-row">
+            <button id="btn-clear-vault-settings" class="btn btn-danger" data-i18n="settings_clear_vault">Clear Vault</button>
+            <button id="btn-clear-history" class="btn btn-danger" data-i18n="settings_clear_history">Clear history</button>
+          </div>
+        </div>
+
+        <div class="section glass">
+          <h2 data-i18n="settings_privacy">Privacy</h2>
+          <p data-i18n="privacy_full"></p>
+        </div>
+
+        <div class="section glass">
+          <h2 data-i18n="settings_about">About</h2>
+          <p><span data-i18n="settings_version">Version</span>: 1.0.0</p>
+          <p id="pwa-info" data-i18n="settings_pwa_info"></p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div id="confirm-modal" class="modal-backdrop" hidden>
+  <div class="modal glass" role="dialog" aria-modal="true">
+    <h3 data-i18n="btn_confirm">Confirm</h3>
+    <p id="confirm-message"></p>
+    <div class="modal-actions">
+      <button id="confirm-cancel" class="btn" data-i18n="btn_cancel">Cancel</button>
+      <button id="confirm-ok" class="btn btn-danger" data-i18n="btn_confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vault record viewer -->
+<div id="record-modal" class="modal-backdrop" hidden>
+  <div class="modal glass" role="dialog" aria-modal="true">
+    <canvas id="record-canvas" width="260" height="260" style="display:block;margin:0 auto 12px;"></canvas>
+    <p id="record-data" style="word-break:break-all; font-size:0.8rem; color:var(--text-dim);"></p>
+    <div class="modal-actions" style="flex-wrap:wrap;">
+      <button id="record-open" class="btn" data-i18n="btn_open_url">Open</button>
+      <button id="record-copy" class="btn" data-i18n="btn_copy">Copy</button>
+      <button id="record-download" class="btn" data-i18n="btn_download">Download</button>
+      <button id="record-delete" class="btn btn-danger" data-i18n="btn_delete">Delete</button>
+      <button id="record-close" class="btn" data-i18n="btn_close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/qr-generator.js"></script>
+<script src="js/qr-scanner.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/vault.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
